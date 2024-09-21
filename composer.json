@@ -12,7 +12,7 @@
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "Cmouleyre\\Lunacms\\": "src/"
+            "LunaCMS\\": "src/"
         }
     },
     "authors": [
@@ -30,8 +30,10 @@
         "PHP"
     ],
     "homepage": "https://github.com/MrManchot/lunacms",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/MrManchot/lunacms.git"
-    }
+    "repositories": [
+        {
+            "type": "git",
+            "url": "https://github.com/MrManchot/lunacms.git"
+        }
+    ]
 }
