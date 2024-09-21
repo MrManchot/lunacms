@@ -1,8 +1,9 @@
 {
     "name": "cmouleyre/lunacms",
-    "description": "Une bibliothèque PHP pour la gestion des contrôleurs et du routage dans un CMS.",
+    "description": "LunaCMS is a lightweight and high-performance content management system.",
     "type": "library",
     "require": {
+        "php": ">=7.4",
         "twig/twig": "^3.14",
         "symfony/console": "^7.1",
         "doctrine/dbal": "^4.1",
@@ -19,5 +20,18 @@
             "name": "Cédric Mouleyre",
             "email": "mouleyrecedric@gmail.com"
         }
-    ]
+    ],
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "keywords": [
+        "cms",
+        "lunacms",
+        "content-management",
+        "PHP"
+    ],
+    "homepage": "https://github.com/MrManchot/lunacms",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/MrManchot/lunacms.git"
+    }
 }
