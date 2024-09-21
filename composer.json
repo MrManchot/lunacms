@@ -1,0 +1,23 @@
+{
+    "name": "cmouleyre/lunacms",
+    "description": "Une bibliothèque PHP pour la gestion des contrôleurs et du routage dans un CMS.",
+    "type": "library",
+    "require": {
+        "twig/twig": "^3.14",
+        "symfony/console": "^7.1",
+        "doctrine/dbal": "^4.1",
+        "phpmailer/phpmailer": "^6.9"
+    },
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Cmouleyre\\Lunacms\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Cédric Mouleyre",
+            "email": "mouleyrecedric@gmail.com"
+        }
+    ]
+}
