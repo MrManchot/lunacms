@@ -210,6 +210,7 @@ class SiteGenerator
     {
         $this->createDirectories();
         $this->createFiles();
+        $this->updateComposerAutoload();
         echo "Site structure successfully created at: {$this->basePath}\n";
     }
 
@@ -254,7 +255,8 @@ class SiteGenerator
                         throw new Exception("Failed to create file: {$filePath}");
                     }
                 } elseif ($filename === 'config/config.json') {
-                    $configContent = str_replace('{{BASE_PATH}}', $this->basePath, self::CONFIG_JSON_TEMPLATE);
+                    $escapedBasePath = str_replace('\\', '\\\\', $this->basePath);
+                    $configContent = str_replace('{{BASE_PATH}}', $escapedBasePath, self::CONFIG_JSON_TEMPLATE);
                     if (file_put_contents($filePath, $configContent) === false) {
                         throw new Exception("Failed to create file: {$filePath}");
                     }
@@ -267,6 +269,49 @@ class SiteGenerator
             } else {
                 echo "File already exists: {$filePath}\n";
             }
+        }
+    }
+
+    protected function updateComposerAutoload(): void
+    {
+        $composerPath = $this->basePath . DIRECTORY_SEPARATOR . 'composer.json';
+        if (file_exists($composerPath)) {
+            $composerJson = file_get_contents($composerPath);
+            if ($composerJson === false) {
+                throw new Exception("Failed to read composer.json at: {$composerPath}");
+            }
+
+            $composerData = json_decode($composerJson, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                throw new Exception("Error parsing composer.json: " . json_last_error_msg());
+            }
+
+            if (!isset($composerData['autoload']['psr-4'])) {
+                $composerData['autoload']['psr-4'] = [
+                    "App\\" => "src/"
+                ];
+                echo "Added PSR-4 autoload section to composer.json.\n";
+            } elseif (!array_key_exists("App\\", $composerData['autoload']['psr-4'])) {
+                $composerData['autoload']['psr-4']["App\\"] = "src/";
+                echo "Added App\\ namespace to composer.json autoload section.\n";
+            } else {
+                echo "PSR-4 autoload section for App\\ already exists in composer.json.\n";
+                return; // No changes needed
+            }
+
+            // Encode with pretty print and unescaped slashes
+            $newComposerJson = json_encode($composerData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+            if ($newComposerJson === false) {
+                throw new Exception("Failed to encode composer.json data.");
+            }
+
+            if (file_put_contents($composerPath, $newComposerJson) === false) {
+                throw new Exception("Failed to write updated composer.json to: {$composerPath}");
+            }
+
+            echo "composer.json has been updated successfully.\n";
+        } else {
+            echo "composer.json does not exist at: {$composerPath}. Skipping autoload update.\n";
         }
     }
 }
