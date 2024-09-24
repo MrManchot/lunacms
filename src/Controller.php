@@ -170,7 +170,8 @@ abstract class Controller
     public function treatment(): void {
     }
 
-    abstract public function dataAssignment(): void;
+    public function dataAssignment(): void {
+    }
 
     protected function addVar(string $key, $value): void
     {
@@ -187,10 +188,11 @@ abstract class Controller
 
     protected function handleError(Exception $e): void
     {
-        http_response_code(500);
-        echo $this->twig->render('error.twig', [
-            'message' => 'An error occurred. Please try again later.'
-        ]);
+        if(self::getConfigVar('debug')) {
+            echo $e->getMessage();
+        } else {
+            http_response_code(500);
+        }
         exit;
     }
 
