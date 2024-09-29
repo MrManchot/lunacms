@@ -53,7 +53,6 @@ class SiteGenerator
 
     private const CONFIG_JSON_TEMPLATE = <<<'JSON'
     {
-        "base_path": "{{BASE_PATH}}",
         "lang": "en",
         "charset": "UTF-8",
         "database": {
@@ -252,12 +251,6 @@ class SiteGenerator
                 if ($filename === 'public/index.php') {
                     $indexContent = str_replace('{{BASE_PATH}}', $this->basePath, self::INDEX_PHP_TEMPLATE);
                     if (file_put_contents($filePath, $indexContent) === false) {
-                        throw new Exception("Failed to create file: {$filePath}");
-                    }
-                } elseif ($filename === 'config/config.json') {
-                    $escapedBasePath = str_replace('\\', '\\\\', $this->basePath);
-                    $configContent = str_replace('{{BASE_PATH}}', $escapedBasePath, self::CONFIG_JSON_TEMPLATE);
-                    if (file_put_contents($filePath, $configContent) === false) {
                         throw new Exception("Failed to create file: {$filePath}");
                     }
                 } else {
