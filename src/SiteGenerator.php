@@ -53,6 +53,7 @@ class SiteGenerator
 
     private const CONFIG_JSON_TEMPLATE = <<<'JSON'
     {
+        "base_path": "{{BASE_PATH}}",
         "lang": "en",
         "charset": "UTF-8",
         "database": {
@@ -76,7 +77,8 @@ class SiteGenerator
             "from_name": "Your Site Name",
             "reply_to_address": "support@example.com",
             "reply_to_name": "Support Team"
-        }
+        },
+        "salt": "{{SALT}}"
     }
     JSON;
 
@@ -143,6 +145,10 @@ class SiteGenerator
     {% endblock %}
 
     {% block content %}
+        <p>LunaCMS</p>
+    {% endblock %}
+
+    {% block content %}
     <p>Content</p>
     {% endblock %}
     TWIG;
@@ -159,9 +165,10 @@ class SiteGenerator
                 <link rel="stylesheet" href="{{ file }}">
             {% endfor %}
         </head>
-        <body>
+        <body class="template-{{ template }}">
             <div class="container">
                 {% block title %}{% endblock %}
+                {% block content %}{% endblock %}
                 <div id="content"> {% block content %}{% endblock %}</div>
                 {% for file in js %}
                     <script src="{{ file }}?t={{ random() }}"></script>
@@ -253,6 +260,13 @@ class SiteGenerator
                     if (file_put_contents($filePath, $indexContent) === false) {
                         throw new Exception("Failed to create file: {$filePath}");
                     }
+                } elseif ($filename === 'config/config.json') {
+                    $escapedBasePath = str_replace('\\', '\\\\', $this->basePath);
+                    $salt = $this->generateSalt();
+                    $configContent = str_replace(['{{BASE_PATH}}', '{{SALT}}'], [$escapedBasePath, $salt], self::CONFIG_JSON_TEMPLATE);
+                    if (file_put_contents($filePath, $configContent) === false) {
+                        throw new Exception("Failed to create file: {$filePath}");
+                    }
                 } else {
                     if (file_put_contents($filePath, $content) === false) {
                         throw new Exception("Failed to create file: {$filePath}");
@@ -306,5 +320,10 @@ class SiteGenerator
         } else {
             echo "composer.json does not exist at: {$composerPath}. Skipping autoload update.\n";
         }
+    }
+
+    protected function generateSalt(int $length = 32): string
+    {
+        return bin2hex(random_bytes($length / 2));
     }
 }

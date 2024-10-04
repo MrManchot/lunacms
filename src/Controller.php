@@ -109,6 +109,7 @@ abstract class Controller
             if ($this->template) {
                 $this->addVar('js', $this->js);
                 $this->addVar('css', $this->css);
+                $this->addVar('template', $this->template);
                 $this->display();
             }
         } catch (Exception $e) {
