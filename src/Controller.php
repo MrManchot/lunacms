@@ -10,7 +10,6 @@ use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Connection;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception as PHPMailerException;
-use Redis;
 
 abstract class Controller
 {
@@ -23,7 +22,7 @@ abstract class Controller
     protected array $css = [];
     protected Connection $connection;
     protected PHPMailer $mailer;
-    protected Redis $redis;
+    protected $redis;
 
     public function __construct(Environment $twig, array $config)
     {
@@ -93,29 +92,42 @@ abstract class Controller
 
     protected function initializeRedis(): void
     {
+        if (!class_exists('Redis')) {
+            return;
+        }
+
         try {
-            $this->redis = new Redis();
+            $this->redis = new \Redis();
             $this->redis->connect($this->config['redis']['host'], $this->config['redis']['port']);
         } catch (Exception $e) {
-            $this->handleError(new Exception('Redis initialization failed: ' . $e->getMessage()));
+            error_log('Redis initialization failed: ' . $e->getMessage());
         }
     }
 
     public function getRedisValue(string $key)
     {
+        if (!$this->redis) {
+            return null;
+        }
+
         try {
             return $this->redis->get($key);
         } catch (Exception $e) {
-            $this->handleError(new Exception('Failed to get value from Redis: ' . $e->getMessage()));
+            error_log('Failed to get value from Redis: ' . $e->getMessage());
+            return null;
         }
     }
 
     public function setRedisValue(string $key, $value, int $ttl = 0): void
     {
+        if (!$this->redis) {
+            return;
+        }
+
         try {
             $this->redis->set($key, $value, $ttl);
         } catch (Exception $e) {
-            $this->handleError(new Exception('Failed to set value in Redis: ' . $e->getMessage()));
+            error_log('Failed to set value in Redis: ' . $e->getMessage());
         }
     }
 
