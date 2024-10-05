@@ -63,13 +63,16 @@ class Routing
     private function callAction(string $controller, array $params): void
     {
         if (class_exists($controller)) {
-            $config = Controller::getConfig();
-            $twig = Controller::getTemplating();
-            $controllerInstance = new $controller($twig, $config);
-            $controllerInstance->init($params);
-            return;
+            try {
+                $config = Controller::getConfig();
+                $twig = Controller::getTemplating();
+                $controllerInstance = new $controller($twig, $config);
+                $controllerInstance->init($params);
+            } catch (Exception $e) {
+                $this->handleError($e);
+            }
         } else {
-            throw new ErrorException("Controller `{$controller}` not found.");
+            $this->handleError(new ErrorException("Controller `{$controller}` not found."));
         }
     }
 
@@ -96,12 +99,16 @@ class Routing
 
     private function handleError(Exception $e): void
     {
-        http_response_code(500);
-        echo '500 - Internal Server Error<br>';
-        echo 'Error message: ' . $e->getMessage() . '<br>';
-        echo 'File: ' . $e->getFile() . '<br>';
-        echo 'Line: ' . $e->getLine() . '<br>';
-        echo 'Trace:<pre>' . $e->getTraceAsString() . '</pre>';
+        if (Controller::getConfig()['debug'] ?? false) {
+            echo '500 - Internal Server Error<br>';
+            echo 'Error message: ' . $e->getMessage() . '<br>';
+            echo 'File: ' . $e->getFile() . '<br>';
+            echo 'Line: ' . $e->getLine() . '<br>';
+            echo 'Trace:<pre>' . $e->getTraceAsString() . '</pre>';
+        } else {
+            http_response_code(500);
+            echo '500 - Internal Server Error';
+        }
         exit;
     }
 }

@@ -10,6 +10,7 @@ use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Connection;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception as PHPMailerException;
+use Redis;
 
 abstract class Controller
 {
@@ -22,6 +23,7 @@ abstract class Controller
     protected array $css = [];
     protected Connection $connection;
     protected PHPMailer $mailer;
+    protected Redis $redis;
 
     public function __construct(Environment $twig, array $config)
     {
@@ -41,17 +43,26 @@ abstract class Controller
             'debug' => false
         ]);
 
-        $dbConfig = $this->config['database'];
-        $connectionParams = [
-            'dbname' => $dbConfig['dbname'],
-            'user' => $dbConfig['user'],
-            'password' => $dbConfig['password'],
-            'host' => $dbConfig['host'],
-            'driver' => 'pdo_mysql',
-        ];
-        $this->connection = DriverManager::getConnection($connectionParams);
-
+        $this->initializeDatabaseConnection();
         $this->initializeMailer();
+        $this->initializeRedis();
+    }
+
+    protected function initializeDatabaseConnection(): void
+    {
+        try {
+            $dbConfig = $this->config['database'];
+            $connectionParams = [
+                'dbname' => $dbConfig['dbname'],
+                'user' => $dbConfig['user'],
+                'password' => $dbConfig['password'],
+                'host' => $dbConfig['host'],
+                'driver' => 'pdo_mysql',
+            ];
+            $this->connection = DriverManager::getConnection($connectionParams);
+        } catch (Exception $e) {
+            $this->handleError($e);
+        }
     }
 
     protected function initializeMailer(): void
@@ -76,12 +87,44 @@ abstract class Controller
 
             $this->mailer->isHTML(true);
         } catch (PHPMailerException $e) {
-            throw new Exception('Mailer initialization failed: ' . $e->getMessage());
+            $this->handleError(new Exception('Mailer initialization failed: ' . $e->getMessage()));
+        }
+    }
+
+    protected function initializeRedis(): void
+    {
+        try {
+            $this->redis = new Redis();
+            $this->redis->connect($this->config['redis']['host'], $this->config['redis']['port']);
+        } catch (Exception $e) {
+            $this->handleError(new Exception('Redis initialization failed: ' . $e->getMessage()));
+        }
+    }
+
+    public function getRedisValue(string $key)
+    {
+        try {
+            return $this->redis->get($key);
+        } catch (Exception $e) {
+            $this->handleError(new Exception('Failed to get value from Redis: ' . $e->getMessage()));
+        }
+    }
+
+    public function setRedisValue(string $key, $value, int $ttl = 0): void
+    {
+        try {
+            $this->redis->set($key, $value, $ttl);
+        } catch (Exception $e) {
+            $this->handleError(new Exception('Failed to set value in Redis: ' . $e->getMessage()));
         }
     }
 
     public function sendEmail(string $toEmail, string $toName, string $subject, string $body, string $altBody = null): bool
     {
+        if (!filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
+            throw new ErrorException("Invalid email address: {$toEmail}");
+        }
+
         try {
             $this->mailer->clearAddresses();
             $this->mailer->clearAttachments();
@@ -189,10 +232,11 @@ abstract class Controller
 
     protected function handleError(Exception $e): void
     {
-        if(self::getConfigVar('debug')) {
+        if ($this->getConfigVar('debug')) {
             echo $e->getMessage();
         } else {
             http_response_code(500);
+            echo '500 - Internal Server Error';
         }
         exit;
     }
