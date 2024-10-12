@@ -1,13 +1,12 @@
 <?php
 
+
 namespace LunaCMS;
 
 use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
 use ErrorException;
 use Exception;
-use Doctrine\DBAL\DriverManager;
-use Doctrine\DBAL\Connection;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception as PHPMailerException;
 
@@ -16,52 +15,44 @@ abstract class Controller
     protected array $vars = [];
     protected Environment $twig;
     protected string $template = '';
+    protected array $site = [];
     protected array $config;
     protected array $params;
     protected array $js = [];
     protected array $css = [];
-    protected Connection $connection;
     protected PHPMailer $mailer;
     protected $redis;
 
     public function __construct(Environment $twig, array $config)
     {
+        session_start();
+        
         $this->config = $config;
         $this->vars['lang'] = $this->config['lang'] ?? 'en';
         $this->vars['charset'] = $this->config['charset'] ?? 'UTF-8';
+        $this->site = Config::getConfigVar('site');
 
         if (!defined('_BASE_PROJECT_')) {
             throw new Exception('Constant _BASE_PROJECT_ is not defined.');
         }
-        $basePath = rtrim(_BASE_PROJECT_, DIRECTORY_SEPARATOR);
-
-        $loader = new FilesystemLoader($basePath . '/templates');
-        $this->twig = new Environment($loader, [
-            'cache' => $basePath . '/cache/twig',
-            'auto_reload' => true,
-            'debug' => false
-        ]);
-
-        $this->initializeDatabaseConnection();
+        
+        $this->twig = self::getTemplating();
         $this->initializeMailer();
         $this->initializeRedis();
     }
 
-    protected function initializeDatabaseConnection(): void
+    public static function getTemplating(): Environment
     {
-        try {
-            $dbConfig = $this->config['database'];
-            $connectionParams = [
-                'dbname' => $dbConfig['dbname'],
-                'user' => $dbConfig['user'],
-                'password' => $dbConfig['password'],
-                'host' => $dbConfig['host'],
-                'driver' => 'pdo_mysql',
-            ];
-            $this->connection = DriverManager::getConnection($connectionParams);
-        } catch (Exception $e) {
-            $this->handleError($e);
+        if (!defined('_BASE_PROJECT_')) {
+            throw new Exception('Constant _BASE_PROJECT_ is not defined.');
         }
+        $basePath = rtrim(_BASE_PROJECT_, DIRECTORY_SEPARATOR);
+        $loader = new FilesystemLoader($basePath . '/templates');
+        return new Environment($loader, [
+            'cache' => $basePath . '/cache/twig',
+            'auto_reload' => true,
+            'debug' => false
+        ]);
     }
 
     protected function initializeMailer(): void
@@ -172,62 +163,8 @@ abstract class Controller
         }
     }
 
-    public static function getConfig(): array
-    {
-        if (!defined('_BASE_PROJECT_')) {
-            throw new Exception('Constant _BASE_PROJECT_ is not defined.');
-        }
-        $configPath = _BASE_PROJECT_ . '/config/config.json';
-        if (!file_exists($configPath)) {
-            throw new Exception('Configuration file does not exist.');
-        }
-
-        $configJson = file_get_contents($configPath);
-        $config = json_decode($configJson, true);
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new Exception('Error parsing configuration file: ' . json_last_error_msg());
-        }
-
-        return $config;
-    }
-
-    public static function getTemplating(): Environment
-    {
-        if (!defined('_BASE_PROJECT_')) {
-            throw new Exception('Constant _BASE_PROJECT_ is not defined.');
-        }
-        $loader = new FilesystemLoader(_BASE_PROJECT_ . '/templates');
-        return new Environment($loader, [
-            'cache' => _BASE_PROJECT_ . '/cache/twig',
-            'auto_reload' => true,
-            'debug' => false
-        ]);
-    }
-
-    public function getConfigVar(string $key)
-    {
-        if (array_key_exists($key, $this->config)) {
-            return $this->config[$key];
-        }
-        throw new ErrorException("Configuration `{$key}` not found.");
-    }
-
-    public function getConnection(): Connection
-    {
-        return $this->connection;
-    }
-
-    public function getMailer(): PHPMailer
-    {
-        return $this->mailer;
-    }
-
-    public function treatment(): void {
-    }
-
-    public function dataAssignment(): void {
-    }
+    public function treatment(): void {}
+    public function dataAssignment(): void {}
 
     protected function addVar(string $key, $value): void
     {
@@ -244,7 +181,7 @@ abstract class Controller
 
     protected function handleError(Exception $e): void
     {
-        if ($this->getConfigVar('debug')) {
+        if (Config::getConfigVar('debug')) {
             echo $e->getMessage();
         } else {
             http_response_code(500);

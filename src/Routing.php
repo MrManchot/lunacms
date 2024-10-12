@@ -2,7 +2,7 @@
 
 namespace LunaCMS;
 
-use LunaCMS\Controller;
+use LunaCMS\Config;
 use ErrorException;
 use Exception;
 
@@ -13,37 +13,24 @@ class Routing
     public function __construct()
     {
         $uri = $this->getCurrentUri();
-        $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-        $this->dispatch($uri, $method);
+        $this->dispatch($uri);
     }
 
     public static function get(string $route, string $controller): void
     {
-        self::$routes[$route]['GET'] = $controller;
+        self::$routes[$route] = $controller;
     }
 
-    public static function post(string $route, string $controller): void
+    private function dispatch(string $uri): void
     {
-        self::$routes[$route]['POST'] = $controller;
-    }
-
-    private function dispatch(string $uri, string $method): void
-    {
-        foreach (self::$routes as $route => $actions) {
+        foreach (self::$routes as $route => $controllerClass) {
             $routePattern = preg_replace('/{\w+}/', '([^/]+)', $route);
             $routePattern = str_replace('/', '\/', $routePattern);
             $pattern = '/^' . $routePattern . '$/';
-
             if (preg_match($pattern, $uri, $matches)) {
-                array_shift($matches);
-                if (isset($actions[$method])) {
-                    $controllerClass = $actions[$method];
-                    $params = $this->bindParams($route, $matches);
-                    $this->callAction($controllerClass, $params);
-                    return;
-                } else {
-                    $this->handleMethodNotAllowed();
-                }
+                $params = $this->bindParams($route, $matches);
+                $this->callAction($controllerClass, $params);
+                return;
             }
         }
 
@@ -55,7 +42,7 @@ class Routing
         $params = [];
         preg_match_all('/{(\w+)}/', $route, $paramNames);
         foreach ($paramNames[1] as $index => $name) {
-            $params[$name] = $matches[$index] ?? null;
+            $params[$name] = $matches[$index + 1] ?? null; // Adjusted index to correctly match params
         }
         return $params;
     }
@@ -64,7 +51,7 @@ class Routing
     {
         if (class_exists($controller)) {
             try {
-                $config = Controller::getConfig();
+                $config = Config::getConfig();
                 $twig = Controller::getTemplating();
                 $controllerInstance = new $controller($twig, $config);
                 $controllerInstance->init($params);
@@ -90,16 +77,10 @@ class Routing
         exit;
     }
 
-    private function handleMethodNotAllowed(): void
-    {
-        http_response_code(405);
-        echo '405 - Method not allowed';
-        exit;
-    }
-
     private function handleError(Exception $e): void
     {
-        if (Controller::getConfig()['debug'] ?? false) {
+        $config = Config::getConfig();
+        if ($config['debug'] ?? false) {
             echo '500 - Internal Server Error<br>';
             echo 'Error message: ' . $e->getMessage() . '<br>';
             echo 'File: ' . $e->getFile() . '<br>';
