@@ -93,8 +93,10 @@ PHP;
     private const INDEX_PHP_TEMPLATE = <<<'PHP'
 <?php
 
-ini_set('session.gc_maxlifetime', 0);
-ini_set('session.cookie_lifetime', 0);
+session_start();
+ini_set('session.gc_maxlifetime', 31536000);
+ini_set('session.cookie_lifetime', 31536000);
+ini_set('session.gc_probability', 0);
 
 if (!defined('_BASE_PROJECT_')) {
     define('_BASE_PROJECT_', '{{BASE_PATH}}');
