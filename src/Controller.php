@@ -25,8 +25,7 @@ abstract class Controller
 
     public function __construct(Environment $twig, array $config)
     {
-        session_start();
-        
+
         $this->config = $config;
         $this->vars['lang'] = $this->config['lang'] ?? 'en';
         $this->vars['charset'] = $this->config['charset'] ?? 'UTF-8';
