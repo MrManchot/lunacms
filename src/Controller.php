@@ -34,7 +34,7 @@ abstract class Controller
         if (!defined('_BASE_PROJECT_')) {
             throw new Exception('Constant _BASE_PROJECT_ is not defined.');
         }
-        
+
         $this->twig = self::getTemplating();
         $this->initializeMailer();
         $this->initializeRedis();
@@ -121,7 +121,7 @@ abstract class Controller
         }
     }
 
-    public function sendEmail(string $toEmail, string $toName, string $subject, string $body, string $altBody = null): bool
+    public function sendEmail(string $toEmail, string $subject, string $body, string $toName = '', string $altBody = null): bool
     {
         if (!filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
             throw new ErrorException("Invalid email address: {$toEmail}");
@@ -143,6 +143,14 @@ abstract class Controller
             error_log('Mailer Error: ' . $e->getMessage());
             return false;
         }
+    }
+
+    public static function getEmailHtml($templateFile, $subject, $body)
+    {
+        $template = file_get_contents($templateFile);
+        $template = str_replace('{subject}', $subject, $template);
+        $template = str_replace('{body}', $body, $template);
+        return $template;
     }
 
     public function init(array $params): void
