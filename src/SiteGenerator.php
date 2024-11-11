@@ -53,7 +53,6 @@ SCSS;
 
     private const CONFIG_JSON_TEMPLATE = <<<'JSON'
 {
-    "base_path": "{{BASE_PATH}}",
     "lang": "en",
     "charset": "UTF-8",
     "database": {
@@ -145,8 +144,8 @@ class PageController extends Controller
     public function dataAssignment(): void
     {
         $this->template = $this->params['slug'] ?? 'index';
-        $this->css[] = '/css/main.css';
-        $this->js[] = '/js/main.js';
+        $this->addCss('/css/main.css');
+        $this->addJs('/js/main.js');
         $this->addVar('meta_title', $this->site['name']);
         $this->addVar('site_title', $this->site['name']);
         $this->addVar('current_page', basename($_SERVER['REQUEST_URI'], '?'));
@@ -178,8 +177,8 @@ TWIG;
         <title>{{ meta_title }}</title>
         <meta name="description" content="{{ meta_description }}">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        {% for file in css %}
-            <link rel="stylesheet" href="{{ file }}">
+        {% for css_file in css %}
+            <link rel="stylesheet" href="{{ css_file.file }}?t={{ css_file.version }}">
         {% endfor %}
     </head>
     <body class="template-{{ template }}">
@@ -187,8 +186,8 @@ TWIG;
             {% block title %}{% endblock %}
             {% block content %}{% endblock %}
             <div id="content"> {% block content %}{% endblock %}</div>
-            {% for file in js %}
-                <script src="{{ file }}?t={{ random() }}"></script>
+            {% for js_file in js %}
+                <script src="{{ js_file.file }}?t={{ js_file.version }}"></script>
             {% endfor %}
         </div>
     </body>
@@ -292,7 +291,7 @@ JS;
                 } elseif ($filename === 'config/config.json') {
                     $escapedBasePath = str_replace('\\', '\\\\', $this->basePath);
                     $salt = $this->generateSalt();
-                    $configContent = str_replace(['{{BASE_PATH}}', '{{SALT}}'], [$escapedBasePath, $salt], self::CONFIG_JSON_TEMPLATE);
+                    $configContent = str_replace(['{{SALT}}'], [$escapedBasePath, $salt], self::CONFIG_JSON_TEMPLATE);
                     if (file_put_contents($filePath, $configContent) === false) {
                         throw new Exception("Failed to create file: {$filePath}");
                     }

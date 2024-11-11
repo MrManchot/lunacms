@@ -199,11 +199,17 @@ abstract class Controller
 
     public function addJs(string $path): void
     {
-        $this->js[] = $path;
+        $this->js[] = [
+            'file' => $path,
+            'version' => md5_file(_BASE_PROJECT_ . '/public' . $path)
+        ];
     }
 
     public function addCss(string $path): void
     {
-        $this->css[] = $path;
+        $this->css[] = [
+            'file' => $path,
+            'version' => md5_file(_BASE_PROJECT_ . '/public' . $path)
+        ];
     }
 }
