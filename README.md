@@ -57,6 +57,7 @@ LunaCMS is a lightweight and extensible PHP library for building content managem
 5. **Generate the Site Structure**
    Use the CLI script to generate the necessary directories and files.
    ```sh
+   cd vendor/cmouleyre/lunacms/
    php create_site.php /path/to/new/site
    ```
 
@@ -65,6 +66,7 @@ LunaCMS is a lightweight and extensible PHP library for building content managem
 
 7. **Build Assets**
    ```sh
+   npm install gulp sass gulp-sass gulp-uglify gulp-clean-css --save-dev
    gulp
    ```
 

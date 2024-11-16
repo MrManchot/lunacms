@@ -145,7 +145,7 @@ class PageController extends Controller
     {
         $this->template = $this->params['slug'] ?? 'index';
         $this->addCss('/css/main.css');
-        $this->addJs('/js/main.js');
+        $this->addJs('/js/script.js');
         $this->addVar('meta_title', $this->site['name']);
         $this->addVar('site_title', $this->site['name']);
         $this->addVar('current_page', basename($_SERVER['REQUEST_URI'], '?'));
@@ -157,11 +157,7 @@ PHP;
 {% extends 'includes/base.twig' %}
 
 {% block title %}
-    <h1>Title</h1>
-{% endblock %}
-
-{% block content %}
-    <p>LunaCMS</p>
+    <h1>LunaCMS</h1>
 {% endblock %}
 
 {% block content %}
@@ -184,7 +180,6 @@ TWIG;
     <body class="template-{{ template }}">
         <div class="container">
             {% block title %}{% endblock %}
-            {% block content %}{% endblock %}
             <div id="content"> {% block content %}{% endblock %}</div>
             {% for js_file in js %}
                 <script src="{{ js_file.file }}?t={{ js_file.version }}"></script>
