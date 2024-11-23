@@ -36,6 +36,9 @@ abstract class Controller
         }
 
         $this->twig = self::getTemplating();
+
+        $this->twig->addFunction(new \Twig\TwigFunction('slugify', [$this, 'generateSlug']));
+
         $this->initializeMailer();
         $this->initializeRedis();
     }
@@ -137,8 +140,7 @@ abstract class Controller
             $this->mailer->Body    = $body;
             $this->mailer->AltBody = $altBody ?? strip_tags($body);
 
-            $this->mailer->send();
-            return true;
+            return $this->mailer->send();
         } catch (PHPMailerException $e) {
             error_log('Mailer Error: ' . $e->getMessage());
             return false;
@@ -211,5 +213,18 @@ abstract class Controller
             'file' => $path,
             'version' => md5_file(_BASE_PROJECT_ . '/public' . $path)
         ];
+    }
+
+    public function generateSlug($string, $separator = '-', $extra = null)
+    {
+        $string = htmlentities($string, ENT_QUOTES, 'UTF-8');
+        $string = preg_replace('~&([a-z]{1,2})(?:acute|cedil|circ|grave|lig|orn|ring|slash|tilde|uml);~i', '$1', $string);
+        $string = html_entity_decode($string, ENT_QUOTES, 'UTF-8');
+
+        $extra = $extra ?? '';
+        $string = preg_replace('~[^0-9a-z' . preg_quote($extra, '~') . ']+~i', $separator, $string);
+
+        $string = trim($string, $separator);
+        return strtolower($string);
     }
 }
