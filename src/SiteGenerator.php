@@ -67,6 +67,11 @@ SCSS;
         "reply_to_address": "support@example.com",
         "reply_to_name": "Support Team"
     },
+    "openai": {
+        "api_url": "https://api.openai.com/v1/",
+        "default_model": "gpt-4o-mini",
+        "default_temperature": 0.7
+    },
     "salt": "{{SALT}}"
 }
 JSON;
@@ -79,6 +84,7 @@ DB_PASSWORD=
 MAIL_HOST=
 MAIL_PORT=
 MAIL_ENCRYPTION=
+OPENAI_API_KEY=
 ENV;
 
     private const ROUTES_PHP_CONTENT = <<<'PHP'
