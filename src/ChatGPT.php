@@ -1,12 +1,10 @@
 <?php
 
-declare(strict_types=1);
-
 namespace LunaCMS;
 
 use Exception;
 
-class ChatGPTClient
+class ChatGPT
 {
     private string $apiUrl;
     private string $apiKey;
