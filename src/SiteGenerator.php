@@ -30,6 +30,7 @@ class SiteGenerator
         'templates/index.twig' => self::INDEX_TWIG_CONTENT,
         'templates/includes/base.twig' => self::BASE_TWIG_CONTENT,
         'gulpfile.js' => self::GULPFILE_JS_CONTENT,
+        '.env' => self::ENV_TEMPLATE
     ];
 
     private const SCRIPT_JS_CONTENT = <<<'JS'
@@ -55,23 +56,12 @@ SCSS;
 {
     "lang": "en",
     "charset": "UTF-8",
-    "database": {
-        "host": "localhost",
-        "dbname": "luncms",
-        "user": "root",
-        "password": ""
-    },
     "debug": true,
     "site": {
         "name": "Your Site Name",
         "base_url": "https://www.yoursite.com/"
     },
     "mail": {
-        "host": "smtp.example.com",
-        "port": 587,
-        "username": "your_email@example.com",
-        "password": "your_email_password",
-        "encryption": "tls",
         "from_address": "no-reply@example.com",
         "from_name": "Your Site Name",
         "reply_to_address": "support@example.com",
@@ -81,11 +71,21 @@ SCSS;
 }
 JSON;
 
+    private const ENV_TEMPLATE = <<<'ENV'
+DB_HOST=
+DB_NAME=
+DB_USER=
+DB_PASSWORD=
+MAIL_HOST=
+MAIL_PORT=
+MAIL_ENCRYPTION=
+ENV;
+
     private const ROUTES_PHP_CONTENT = <<<'PHP'
 <?php
 
 return [
-    '' => 'App\Controllers\PageController'
+    '' => 'App\\Controllers\\PageController'
 ];
 PHP;
 
@@ -104,7 +104,7 @@ if (!defined('_BASE_PROJECT_')) {
 require_once _BASE_PROJECT_ . '/vendor/autoload.php';
 
 try {
-    $config = LunaCMS\Config::getConfig();
+    $config = \LunaCMS\Config::getConfig();
 } catch (Exception $e) {
     die('Failed to load configuration: ' . $e->getMessage());
 }
@@ -122,11 +122,11 @@ if (!file_exists($routesPath)) {
 
 $routes = require $routesPath;
 foreach ($routes as $route => $controller) {
-    LunaCMS\Routing::get($route, $controller);
+    \LunaCMS\Routing::get($route, $controller);
 }
 
 try {
-    new LunaCMS\Routing();
+    new \LunaCMS\Routing();
 } catch (Exception $e) {
     die('Failed to initialize routing: ' . $e->getMessage());
 }
@@ -180,7 +180,7 @@ TWIG;
     <body class="template-{{ template }}">
         <div class="container">
             {% block title %}{% endblock %}
-            <div id="content"> {% block content %}{% endblock %}</div>
+            <div id="content">{% block content %}{% endblock %}</div>
             {% for js_file in js %}
                 <script src="{{ js_file.file }}?t={{ js_file.version }}"></script>
             {% endfor %}
@@ -196,30 +196,24 @@ const gulpSass = require('gulp-sass')(dartSass);
 const uglify = require('gulp-uglify');
 const cleanCSS = require('gulp-clean-css');
 
-// Compile SCSS to CSS
 gulp.task('scss', () =>
-    gulp.src('assets/scss/main.scss') // Only compile main.scss which imports other partials like card.scss
-        .pipe(gulpSass({
-            logger: dartSass.Logger.silent
-        }).on('error', gulpSass.logError))
+    gulp.src('assets/scss/main.scss')
+        .pipe(gulpSass({ logger: dartSass.Logger.silent }).on('error', gulpSass.logError))
         .pipe(cleanCSS())
         .pipe(gulp.dest('public/css'))
 );
 
-// Minify each JavaScript file individually
 gulp.task('js', () =>
     gulp.src('assets/js/**/*.js')
         .pipe(uglify())
         .pipe(gulp.dest('public/js'))
 );
 
-// Watch files for changes
 gulp.task('watch', () => {
     gulp.watch('assets/scss/**/*.scss', gulp.series('scss'));
     gulp.watch('assets/js/**/*.js', gulp.series('js'));
 });
 
-// Default task
 gulp.task('default', gulp.series('scss', 'js', 'watch'));
 JS;
 
@@ -248,7 +242,6 @@ JS;
             } else {
                 echo "Directory already exists: {$path}\n";
             }
-
             if ($dir === 'cache/twig') {
                 if (!chmod($path, 0777)) {
                     throw new Exception("Failed to set permissions 777 on: {$path}");
@@ -266,7 +259,6 @@ JS;
             'src/Controllers/PageController.php',
             'gulpfile.js',
         ];
-
         foreach ($this->files as $filename => $content) {
             $filePath = $this->basePath . DIRECTORY_SEPARATOR . $filename;
             $dirPath = dirname($filePath);
@@ -276,7 +268,6 @@ JS;
                 }
                 echo "Directory created for file: {$dirPath}\n";
             }
-
             if (!file_exists($filePath) || in_array($filename, $overwriteFiles)) {
                 if ($filename === 'public/index.php') {
                     $indexContent = str_replace('{{BASE_PATH}}', $this->basePath, self::INDEX_PHP_TEMPLATE);
@@ -286,8 +277,12 @@ JS;
                 } elseif ($filename === 'config/config.json') {
                     $escapedBasePath = str_replace('\\', '\\\\', $this->basePath);
                     $salt = $this->generateSalt();
-                    $configContent = str_replace(['{{SALT}}'], [$escapedBasePath, $salt], self::CONFIG_JSON_TEMPLATE);
+                    $configContent = str_replace('{{SALT}}', $salt, self::CONFIG_JSON_TEMPLATE);
                     if (file_put_contents($filePath, $configContent) === false) {
+                        throw new Exception("Failed to create file: {$filePath}");
+                    }
+                } elseif ($filename === '.env') {
+                    if (file_put_contents($filePath, $content) === false) {
                         throw new Exception("Failed to create file: {$filePath}");
                     }
                 } else {
@@ -310,12 +305,10 @@ JS;
             if ($composerJson === false) {
                 throw new Exception("Failed to read composer.json at: {$composerPath}");
             }
-
             $composerData = json_decode($composerJson, true);
             if (json_last_error() !== JSON_ERROR_NONE) {
                 throw new Exception("Error parsing composer.json: " . json_last_error_msg());
             }
-
             if (!isset($composerData['autoload']['psr-4'])) {
                 $composerData['autoload']['psr-4'] = [
                     "App\\" => "src/"
@@ -328,16 +321,13 @@ JS;
                 echo "PSR-4 autoload section for App\\ already exists in composer.json.\n";
                 return;
             }
-
             $newComposerJson = json_encode($composerData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
             if ($newComposerJson === false) {
                 throw new Exception("Failed to encode composer.json data.");
             }
-
             if (file_put_contents($composerPath, $newComposerJson) === false) {
                 throw new Exception("Failed to write updated composer.json to: {$composerPath}");
             }
-
             echo "composer.json has been updated successfully.\n";
         } else {
             echo "composer.json does not exist at: {$composerPath}. Skipping autoload update.\n";
