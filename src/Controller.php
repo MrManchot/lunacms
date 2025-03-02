@@ -65,12 +65,16 @@ abstract class Controller
 
         try {
             $this->mailer->isSMTP();
-            $this->mailer->Host       = $mailConfig['host'];
-            $this->mailer->SMTPAuth   = true;
-            $this->mailer->Username   = $mailConfig['username'];
-            $this->mailer->Password   = $mailConfig['password'];
+            $this->mailer->Host = $mailConfig['host'];
+            $this->mailer->SMTPAuth = true;
+            if (isset($_ENV['MAIL_USERNAME'])) {
+                $parsedConfig['mail']['username'] = $_ENV['MAIL_USERNAME'];
+            }
+            if (isset($_ENV['MAIL_PASSWORD'])) {
+                $parsedConfig['mail']['password'] = $_ENV['MAIL_PASSWORD'];
+            }
             $this->mailer->SMTPSecure = $mailConfig['encryption'];
-            $this->mailer->Port       = $mailConfig['port'];
+            $this->mailer->Port = $mailConfig['port'];
 
             $this->mailer->setFrom($mailConfig['from_address'], $mailConfig['from_name']);
             if (!empty($mailConfig['reply_to_address'])) {
@@ -137,7 +141,7 @@ abstract class Controller
             $this->mailer->addAddress($toEmail, $toName);
 
             $this->mailer->Subject = $subject;
-            $this->mailer->Body    = $body;
+            $this->mailer->Body = $body;
             $this->mailer->AltBody = $altBody ?? strip_tags($body);
 
             return $this->mailer->send();
@@ -172,8 +176,12 @@ abstract class Controller
         }
     }
 
-    public function treatment(): void {}
-    public function dataAssignment(): void {}
+    public function treatment(): void
+    {
+    }
+    public function dataAssignment(): void
+    {
+    }
 
     protected function addVar(string $key, $value): void
     {
@@ -199,20 +207,28 @@ abstract class Controller
         exit;
     }
 
+    private function addMedia(string $path, string $type): void
+    {
+        $filePath = _BASE_PROJECT_ . '/public' . $path;
+
+        if (!file_exists($filePath)) {
+            error_log('File ' . $type . ' not found : ' . $filePath);
+        } else {
+            $this->{$type}[] = [
+                'file' => $path,
+                'version' => md5_file($filePath)
+            ];
+        }
+    }
+
     public function addJs(string $path): void
     {
-        $this->js[] = [
-            'file' => $path,
-            'version' => md5_file(_BASE_PROJECT_ . '/public' . $path)
-        ];
+        $this->addMedia($path, 'js');
     }
 
     public function addCss(string $path): void
     {
-        $this->css[] = [
-            'file' => $path,
-            'version' => md5_file(_BASE_PROJECT_ . '/public' . $path)
-        ];
+        $this->addMedia($path, 'css');
     }
 
     public function generateSlug($string, $separator = '-', $extra = null)

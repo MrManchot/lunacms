@@ -4,7 +4,7 @@ namespace LunaCMS;
 
 use Exception;
 
-class ChatGPT
+class ChatGPTClient
 {
     private string $apiUrl;
     private string $apiKey;
