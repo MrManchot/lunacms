@@ -1,35 +1,31 @@
 <?php
 
-namespace LunaCMS;
+namespace LunaCMS\Services;
 
 use Exception;
 
-class ChatGPTClient
+class OpenAIChatService
 {
     private string $apiUrl;
     private string $apiKey;
     private string $defaultModel;
     private float $defaultTemperature;
 
-    public function __construct()
+    public function __construct(array $config)
     {
-        $openAiConfig = Config::getConfigVar('openai') ?? [];
-
-        $this->apiUrl = $openAiConfig['api_url'] ?? 'https://api.openai.com/v1/';
-        $this->apiKey = $_ENV['OPENAI_API_KEY'] ?? '';
-        $this->defaultModel = $openAiConfig['default_model'] ?? 'gpt-4o-mini';
-        $this->defaultTemperature = $openAiConfig['default_temperature'] ?? 0.7;
+        $this->apiUrl = $config['api_url'] ?? 'https://api.openai.com/v1/';
+        $this->apiKey = getenv('OPENAI_API_KEY') ?: '';
 
         if (empty($this->apiKey)) {
             throw new Exception('OpenAI API key not set. Provide it in .env as OPENAI_API_KEY.');
         }
+
+        $this->defaultModel = $config['default_model'] ?? 'gpt-4o-mini';
+        $this->defaultTemperature = $config['default_temperature'] ?? 0.7;
     }
 
-    public function chatCompletion(
-        string $message,
-        ?string $model = null,
-        ?float $temperature = null
-    ): ?array {
+    public function chatCompletion(string $message, ?string $model = null, ?float $temperature = null): ?string
+    {
         $model = $model ?? $this->defaultModel;
         $temperature = $temperature ?? $this->defaultTemperature;
 
@@ -44,9 +40,7 @@ class ChatGPTClient
         $response = $this->sendRequest('chat/completions', $payload);
 
         if (isset($response['choices'][0]['message']['content'])) {
-            $data = $response['choices'][0]['message']['content'];
-            $data = str_replace(['```json', '```html', '```'], '', $data);
-            return json_decode(trim($data), true);
+            return trim($response['choices'][0]['message']['content']);
         }
 
         return null;
@@ -66,12 +60,26 @@ class ChatGPTClient
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
         curl_close($ch);
 
-        if ($httpCode === 200 && $response !== false) {
-            return json_decode($response, true);
+        if ($curlError) {
+            error_log('cURL Error: ' . $curlError);
+            return null;
         }
 
-        return null;
+        if ($httpCode !== 200) {
+            error_log('OpenAI API Error: HTTP ' . $httpCode);
+            return null;
+        }
+
+        $decodedResponse = json_decode($response, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            error_log('JSON decode error: ' . json_last_error_msg());
+            return null;
+        }
+
+        return $decodedResponse;
     }
 }
