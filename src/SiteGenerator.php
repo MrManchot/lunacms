@@ -18,6 +18,10 @@ class SiteGenerator
         'src/Controllers',
         'templates/includes',
         'cache/twig',
+        'docker/nginx',
+        'docker/nginx/logs',
+        'docker/ssl',
+        'docker/php'
     ];
 
     protected array $files = [
@@ -30,7 +34,12 @@ class SiteGenerator
         'templates/index.twig' => self::INDEX_TWIG_CONTENT,
         'templates/includes/base.twig' => self::BASE_TWIG_CONTENT,
         'gulpfile.js' => self::GULPFILE_JS_CONTENT,
-        '.env' => self::ENV_TEMPLATE
+        '.env' => self::ENV_TEMPLATE,
+        'docker-compose.yml' => self::DOCKER_COMPOSE_TEMPLATE,
+        'docker/nginx/nginx.conf' => self::NGINX_CONF_TEMPLATE,
+        'docker/php/Dockerfile' => self::DOCKERFILE_PHP_TEMPLATE,
+        'docker/php/php-fpm.conf' => self::PHP_FPM_TEMPLATE,
+        'docker/php/custom-php.ini' => self::CUSTOM_PHP_INI_TEMPLATE
     ];
 
     private const SCRIPT_JS_CONTENT = <<<'JS'
@@ -77,15 +86,39 @@ SCSS;
 JSON;
 
     private const ENV_TEMPLATE = <<<'ENV'
-DB_HOST=
-DB_NAME=
-DB_USER=
-DB_PASSWORD=
+
+# Projet
+PROJECT_NAME=lunacms
+SERVER_NAME=localhost
+
+# Nginx
+NGINX_HTTP_PORT=8080
+NGINX_HTTPS_PORT=8443
+
+# PHP & Base de données
+PHP_VERSION=latest
+MARIADB_VERSION=latest
+MYSQL_ROOT_PASSWORD=rootpassword
+MYSQL_DATABASE=mydatabase
+MYSQL_USER=myuser
+MYSQL_PASSWORD=mypassword
+MYSQL_HOST=${PROJECT_NAME}_mariadb
+MYSQL_PORT=3307
+
+# SSL
+SSL_CERTIFICATE=certificat.crt
+SSL_CERTIFICATE_KEY=certificat.key
+
+# Mail
 MAIL_HOST=
 MAIL_PORT=
 MAIL_ENCRYPTION=
+
+# API Keys
 OPENAI_API_KEY=
+
 ENV;
+
 
     private const ROUTES_PHP_CONTENT = <<<'PHP'
 <?php
@@ -222,6 +255,114 @@ gulp.task('watch', () => {
 
 gulp.task('default', gulp.series('scss', 'js', 'watch'));
 JS;
+
+
+
+    private const DOCKER_COMPOSE_TEMPLATE = <<<'YML'
+services:
+  nginx:
+    image: nginx:latest
+    container_name: ${PROJECT_NAME}_nginx
+    ports:
+      - "${NGINX_HTTP_PORT}:80"
+      - "${NGINX_HTTPS_PORT}:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./docker/nginx/logs:/var/log/nginx
+      - ./docker/ssl:/var/www/${PROJECT_NAME}/docker/ssl
+      - .:/var/www/${PROJECT_NAME}
+    depends_on:
+      - php
+      - mariadb
+    networks:
+      - default
+
+  php:
+    build:
+      context: ./docker/php
+      args:
+        PHP_VERSION: ${PHP_VERSION}
+    container_name: ${PROJECT_NAME}_php
+    volumes:
+      - .:/var/www/${PROJECT_NAME}
+    working_dir: /var/www/${PROJECT_NAME}
+    networks:
+      - default
+
+  mariadb:
+    image: mariadb:${MARIADB_VERSION}
+    container_name: ${PROJECT_NAME}_mariadb
+    restart: always
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${MYSQL_DATABASE}
+      MARIADB_USER: ${MYSQL_USER}
+      MARIADB_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "${MYSQL_PORT}:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    networks:
+      - default
+
+  adminer:
+    image: adminer:latest
+    container_name: ${PROJECT_NAME}_adminer
+    restart: always
+    environment:
+      ADMINER_DEFAULT_SERVER: ${PROJECT_NAME}_mariadb
+    ports:
+      - "${ADMINER_PORT}:8080"
+    networks:
+      - default
+
+volumes:
+  mariadb_data:
+
+networks:
+  default:
+    name: ${PROJECT_NAME}_network
+    driver: bridge
+YML;
+
+    private const NGINX_CONF_TEMPLATE = <<<'NGINX'
+events {}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    server {
+        listen 80;
+        server_name ${SERVER_NAME};
+
+        return 301 https://$host$request_uri;
+    }
+
+    server {
+        listen 443 ssl;
+        server_name ${SERVER_NAME};
+
+        root /var/www/${PROJECT_NAME};
+        index index.php index.html index.htm;
+
+        ssl_certificate /var/www/${PROJECT_NAME}/docker/ssl/${SSL_CERTIFICATE};
+        ssl_certificate_key /var/www/${PROJECT_NAME}/docker/ssl/${SSL_CERTIFICATE_KEY};
+
+        location / {
+            try_files $uri $uri/ /index.php$is_args$args;
+        }
+
+        location ~ \.php$ {
+            include fastcgi_params;
+            fastcgi_pass ${PROJECT_NAME}_php:9000;
+            fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+            fastcgi_param DOCUMENT_ROOT $document_root;
+        }
+    }
+}
+NGINX;
+
 
     public function __construct(string $basePath)
     {

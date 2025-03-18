@@ -44,17 +44,17 @@ class Config
             // Exemple de fusion : si .env définit DB_HOST, DB_USER, etc. on les injecte
             // Ici on montre comment surcharger la config en prenant les variables d'env si présentes
             // Tu peux adapter selon tes besoins (BDD, mails, etc.).
-            if (isset($_ENV['DB_HOST'])) {
-                $parsedConfig['database']['host'] = $_ENV['DB_HOST'];
+            if (isset($_ENV['MYSQL_HOST'])) {
+                $parsedConfig['database']['host'] = $_ENV['MYSQL_HOST'];
             }
-            if (isset($_ENV['DB_NAME'])) {
-                $parsedConfig['database']['dbname'] = $_ENV['DB_NAME'];
+            if (isset($_ENV['MYSQL_DATABASE'])) {
+                $parsedConfig['database']['dbname'] = $_ENV['MYSQL_DATABASE'];
             }
-            if (isset($_ENV['DB_USER'])) {
-                $parsedConfig['database']['user'] = $_ENV['DB_USER'];
+            if (isset($_ENV['MYSQL_USER'])) {
+                $parsedConfig['database']['user'] = $_ENV['MYSQL_USER'];
             }
-            if (isset($_ENV['DB_PASSWORD'])) {
-                $parsedConfig['database']['password'] = $_ENV['DB_PASSWORD'];
+            if (isset($_ENV['MYSQL_PASSWORD'])) {
+                $parsedConfig['database']['password'] = $_ENV['MYSQL_PASSWORD'];
             }
             if (isset($_ENV['MAIL_HOST'])) {
                 $parsedConfig['mail']['host'] = $_ENV['MAIL_HOST'];
