@@ -67,12 +67,11 @@ abstract class Controller
             $this->mailer->isSMTP();
             $this->mailer->Host = $mailConfig['host'];
             $this->mailer->SMTPAuth = true;
-            if (isset($_ENV['MAIL_USERNAME'])) {
-                $parsedConfig['mail']['username'] = $_ENV['MAIL_USERNAME'];
-            }
-            if (isset($_ENV['MAIL_PASSWORD'])) {
-                $parsedConfig['mail']['password'] = $_ENV['MAIL_PASSWORD'];
-            }
+
+            // Récupération des identifiants correctement
+            $this->mailer->Username = $_ENV['MAIL_USERNAME'] ?? $mailConfig['username'];
+            $this->mailer->Password = $_ENV['MAIL_PASSWORD'] ?? $mailConfig['password'];
+
             $this->mailer->SMTPSecure = $mailConfig['encryption'];
             $this->mailer->Port = $mailConfig['port'];
 
