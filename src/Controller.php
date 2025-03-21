@@ -5,8 +5,7 @@ namespace LunaCMS;
 
 use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
-use ErrorException;
-use Exception;
+use LunaCMS\Exception;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception as PHPMailerException;
 
@@ -130,7 +129,7 @@ abstract class Controller
     public function sendEmail(string $toEmail, string $subject, string $body, string $toName = '', string $altBody = null): bool
     {
         if (!filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
-            throw new ErrorException("Invalid email address: {$toEmail}");
+            throw new Exception("Invalid email address: {$toEmail}");
         }
 
         try {
