@@ -11,9 +11,8 @@ class Exception extends \Exception
 
         // Format du message avec date
         $logMessage = sprintf(
-            "[%s] [%s] %s in %s on line %d\n",
+            "[%s] %s in %s on line %d\n",
             date('Y-m-d H:i:s'),
-            static::class,
             $message,
             $this->getFile(),
             $this->getLine()
